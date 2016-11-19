@@ -21,6 +21,7 @@ library
                        PhysicalQuantities.Decomposition
                        PhysicalQuantities.Templates
 
+                       PhQ
                        PhQ.PhysicalQuantities
                        PhQ.Units.SI
                        PhQ.Units.SI.Base

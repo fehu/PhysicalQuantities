@@ -15,6 +15,7 @@
            , FlexibleContexts
            , UndecidableInstances
            , PolyKinds
+           , FlexibleInstances
        #-}
 
 module PhysicalQuantities.Definitions (
@@ -24,7 +25,7 @@ module PhysicalQuantities.Definitions (
 , Unit(..), UnitSystem(..), UnitFor(..)
 , (:*)(..), (:/)(..), (:^)(..)
 
-, Measured(..)
+, Measured(..), MeasurePrefix(..)
 
 , module TypeNum.Rational
 
@@ -76,16 +77,33 @@ instance (Unit a, MaybeRational p, KnownRatio (AsRational p)) =>
 
 -----------------------------------------------------------------------------
 
-class Measured m u v | m -> u, m -> v
+class ( MeasurePrefix (Prefix m) v
+      , Eq m, Ord m, Show m  ) =>
+  Measured m u v | m -> u, m -> v
     where type Prefix m
           measuredUnit     :: m -> u
           measuredPrefix   :: m -> Maybe (Prefix m)
-          measuredRawValue :: m -> v
+--          measuredRawValue :: m -> v
 
           measuredValue :: m -> v
           measured  :: v -> Prefix m -> u -> m
           measured' :: v -> u -> m
 
+unitFor :: Unit (UnitFor sys phq) => sys -> phq -> UnitFor sys phq
+unitFor _ _ = unitInstance
+
+--measuredSys ::(Measured m u v, UnitFor sys q ~ u, Unit u) => sys -> q -> Prefix m -> v -> m
+--measuredSys s q pref v = measured v pref (unitFor s q)
+
 -----------------------------------------------------------------------------
 
+--class (Measured m (UnitFor sys q) v) =>
+--  MeasuredSys m sys q v | m -> sys, m -> q
+--    where measuredSys :: sys -> q -> v -> m
+
+
+
+-----------------------------------------------------------------------------
+
+class (Num v) => MeasurePrefix p v where prefixNum :: p -> v
 

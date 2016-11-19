@@ -24,6 +24,6 @@ import PhQ.Units.SI.Base
 
 -- * Composite Units
 
-$(genDerivedUnit "MeterPerSecond" (unitInstance :: (Meter :/ Second)))
+genDerivedUnit "MeterPerSecond" "mps" (unitInstance :: (Meter :/ Second))
 
 

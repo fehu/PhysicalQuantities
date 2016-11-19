@@ -25,3 +25,7 @@ main = hspec $ do
           && mistake(B::B( MeterPerSecond ~~ Meter ))
           && mistake(B::B( MeterPerSecond ~~ (Meter :* Second) ))
 
+    describe "Measured SI Value" $ do
+        it "can be constructed with a prefix or not"
+            $ measured' (5 :: Float) MeterPerSecond == measured' 5 MeterPerSecond
+

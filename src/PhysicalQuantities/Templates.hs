@@ -21,8 +21,10 @@
 
 module PhysicalQuantities.Templates (
 
+genUnitSystem
+
 -- * Physical Quantities Code Generation
-  genPhysicalQuantity
+, genPhysicalQuantity
 
 -- * Units Code Generation
 , genBaseUnit
@@ -60,6 +62,25 @@ unitT name ut = do tName <- conT name
                    t     <- ut
                    return $ TySynInstD (mkName "UnitT'") (TySynEqn [tName] t)
 
+
+-- Unit System Code Generation
+-----------------------------------------------------------------------------
+
+genUnitSystem :: String -> Q [Dec]
+genUnitSystem name = do let noCxt = (cxt [])
+                        nme     <- newName name
+
+                        dta  <- dataD noCxt nme [] [] []
+                        inst <- instanceD noCxt [t|UnitSystem $(conT nme)|]
+                                          [ funD (mkName "systemName")
+                                                 [ clause [wildP]
+                                                          (normalB . litE $ stringL name )
+                                                          []
+                                                 ]
+                                            ]
+                        return [dta, inst]
+
+
 -- Physical Quantities Code Generation
 -----------------------------------------------------------------------------
 
@@ -82,15 +103,19 @@ genPhysicalQuantity name' dim = do
 -----------------------------------------------------------------------------
 
 
--- | Generates only data and 'Unit' instance.
-genUnit' :: String -> Q [Dec]
-genUnit' name' = let name = mkName name'
+-- | Generates data and 'Unit' instance.
+genUnit :: String -> String -> Q [Dec]
+genUnit name' uname = let name = mkName name'
             in sequence [ dataD (cxt []) name [] [normalC name []] []
                         , instanceD (cxt []) [t| Unit $(conT name) |]
-                                    [ return $ strNameConstFun "unitName" name'
+                                    [ return $ strNameConstFun "unitName" uname
                                     , return $ dataInstConstFun [] "unitInstance" name
                                     ]
                         ]
+
+-- | Generates data and 'Unit' instance.
+genUnit' :: String  -> Q [Dec]
+genUnit' name' = genUnit name' name'
 
 genBaseUnit :: String -> Q [Dec]
 genBaseUnit name' = do let name = mkName name'
@@ -103,14 +128,15 @@ genBaseUnit name' = do let name = mkName name'
                        return $ uDef ++ [tDef, iDef]
 
 
-genDerivedUnit :: (DerivedUnit u) => String -> u -> Q [Dec]
-genDerivedUnit name' u = do let name = mkName name'
-                            uDef <- genUnit' name'
-                            struct <- structureAsType $ unitComposition u
-                            iDef <- instanceD (cxt []) [t| DerivedUnit $(conT name) |]
-                                              [ return $ tInst name "UnitComposition" struct ]
-                            tDef <- unitT name [t| UnitDerived |]
-                            return $ uDef ++ [tDef, iDef]
+genDerivedUnit :: (DerivedUnit u) => String -> String -> u -> Q [Dec]
+genDerivedUnit name' uname u = do
+    let name = mkName name'
+    uDef <- genUnit name' uname
+    struct <- structureAsType $ unitComposition u
+    iDef <- instanceD (cxt []) [t| DerivedUnit $(conT name) |]
+                      [ return $ tInst name "UnitComposition" struct ]
+    tDef <- unitT name [t| UnitDerived |]
+    return $ uDef ++ [tDef, iDef]
 
 
 -----------------------------------------------------------------------------
