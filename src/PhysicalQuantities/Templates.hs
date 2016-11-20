@@ -67,18 +67,18 @@ unitT name ut = do tName <- conT name
 -----------------------------------------------------------------------------
 
 genUnitSystem :: String -> Q [Dec]
-genUnitSystem name = do let noCxt = (cxt [])
-                        nme     <- newName name
+genUnitSystem nme = do let noCxt = (cxt [])
+                       let name = mkName nme
 
-                        dta  <- dataD noCxt nme [] [] []
-                        inst <- instanceD noCxt [t|UnitSystem $(conT nme)|]
-                                          [ funD (mkName "systemName")
-                                                 [ clause [wildP]
-                                                          (normalB . litE $ stringL name )
-                                                          []
-                                                 ]
-                                            ]
-                        return [dta, inst]
+                       dta  <- dataD noCxt name [] [normalC name []] []
+                       inst <- instanceD noCxt [t|UnitSystem $(conT name)|]
+                                         [ funD (mkName "systemName")
+                                                [ clause [wildP]
+                                                         (normalB . litE $ stringL nme )
+                                                         []
+                                                ]
+                                           ]
+                       return [dta, inst]
 
 
 -- Physical Quantities Code Generation
@@ -91,7 +91,7 @@ genPhysicalQuantity name' dim = do
     dimType <- case dim of Dimensionless -> [t| Dimensionless |]
                            Scalar        -> [t| Scalar |]
                            Vector        -> [t| Vector |]
-    sequence [ dataD (cxt []) name [] [] []
+    sequence [ dataD (cxt []) name [] [normalC name []] []
              , instanceD (cxt []) [t| PhysicalQuantity $(conT name)|]
                          [ return $ strNameConstFun "quantityName" name'
                          , return $ TySynInstD (mkName "QuantityDimensions")

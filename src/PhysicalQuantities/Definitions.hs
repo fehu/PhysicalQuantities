@@ -26,6 +26,8 @@ module PhysicalQuantities.Definitions (
 , (:*)(..), (:/)(..), (:^)(..)
 
 , Measured(..), MeasurePrefix(..)
+, Measurable(..)
+--, measuredSys
 
 , module TypeNum.Rational
 
@@ -83,27 +85,37 @@ class ( MeasurePrefix (Prefix m) v
     where type Prefix m
           measuredUnit     :: m -> u
           measuredPrefix   :: m -> Maybe (Prefix m)
---          measuredRawValue :: m -> v
 
           measuredValue :: m -> v
           measured  :: v -> Prefix m -> u -> m
           measured' :: v -> u -> m
 
-unitFor :: Unit (UnitFor sys phq) => sys -> phq -> UnitFor sys phq
-unitFor _ _ = unitInstance
 
+class (Num v) => MeasurePrefix p v where prefixNum :: p -> v
+                                         prefixFromNum :: v -> Maybe p
+
+
+--unitFor :: Unit (UnitFor sys phq) => sys -> phq -> UnitFor sys phq
+--unitFor _ _ = unitInstance
+--
 --measuredSys ::(Measured m u v, UnitFor sys q ~ u, Unit u) => sys -> q -> Prefix m -> v -> m
 --measuredSys s q pref v = measured v pref (unitFor s q)
 
------------------------------------------------------------------------------
-
---class (Measured m (UnitFor sys q) v) =>
---  MeasuredSys m sys q v | m -> sys, m -> q
---    where measuredSys :: sys -> q -> v -> m
-
 
 
 -----------------------------------------------------------------------------
 
-class (Num v) => MeasurePrefix p v where prefixNum :: p -> v
+
+--class Measurable m phq v | m -> phq, m -> v
+--    where measurable   :: (MeasurePrefix pref v)             => phq -> pref -> v -> m
+--          measurable'  ::                                       phq -> v -> m
+--          inUnitSystem :: ( Measured m (UnitFor sys phq) v ) => m -> sys -> m0
+
+
+data Measurable phq v
+
+--inUnitSystem :: ( Measured m0 (UnitFor sys phq) v ) => Measurable phq v -> sys -> m0
+--inUnitSystem =
+
+
 

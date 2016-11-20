@@ -21,7 +21,7 @@
 module PhQ.Units.SI ( module Export, MeasuredSI ) where
 
 
-import PhysicalQuantities.Definitions as Export
+import PhQ                    as Export
 import PhQ.Units.SI.Base      as Export
 import PhQ.Units.SI.Composite as Export
 

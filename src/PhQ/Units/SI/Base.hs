@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE TemplateHaskell#-} -- , UndecidableInstances
--- {-# OPTIONS_GHC -ddump-splices #-}
+{-# OPTIONS_GHC -ddump-splices #-}
 
 
 module PhQ.Units.SI.Base where

@@ -13,7 +13,7 @@
 
 
 {-# LANGUAGE TemplateHaskell #-}
--- {-# OPTIONS_GHC -ddump-splices #-}
+{-# OPTIONS_GHC -ddump-splices #-}
 
 module PhQ.PhysicalQuantities where
 
@@ -23,7 +23,7 @@ import PhysicalQuantities.Templates
 -----------------------------------------------------------------------------
 
 -- * Dimensionless
-genPhysicalQuantity "Dimensionless" Dimensionless
+genPhysicalQuantity "Factor" Dimensionless
 
 
 -- * Scalar

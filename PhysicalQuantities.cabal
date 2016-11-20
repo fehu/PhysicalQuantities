@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                PhysicalQuantities
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            Type level physical quantities and measurement units.
 -- description:
 homepage:            -
@@ -26,6 +26,7 @@ library
                        PhQ.Units.SI
                        PhQ.Units.SI.Base
                        PhQ.Units.SI.Composite
+
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9
