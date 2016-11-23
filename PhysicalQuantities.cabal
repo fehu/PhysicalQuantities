@@ -2,14 +2,14 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                PhysicalQuantities
-version:             0.1.1.0
+version:             0.2
 synopsis:            Type level physical quantities and measurement units.
 -- description:
 homepage:            -
 license:             MIT
 license-file:        LICENSE
 author:              Dmitry K.
-maintainer:          kdn.kovalev@gmail.com
+maintainer:          -
 -- copyright:
 category:            Development
 build-type:          Simple
@@ -17,39 +17,46 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     PhysicalQuantities.Definitions
+  exposed-modules:
+                       PhysicalQuantities.Definitions
+                       PhysicalQuantities.Combinations
                        PhysicalQuantities.Decomposition
                        PhysicalQuantities.Templates
 
-                       PhQ
-                       PhQ.PhysicalQuantities
-                       PhQ.Units.SI
-                       PhQ.Units.SI.Base
-                       PhQ.Units.SI.Composite
+                       PhysicalQuantities.Quantity
+--
+--                       PhQ
+--                       PhQ.PhysicalQuantities
+--                       PhQ.Units.SI
+--                       PhQ.Units.SI.Base
+--                       PhQ.Units.SI.Composite
 
-  -- other-modules:
+
+  other-modules:       PhysicalQuantities.Quantity.Base
+                       PhysicalQuantities.Quantity.Derived
+
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9
                      , template-haskell >= 2.10 && < 2.11
+--                     , singletons >= 2.1 && < 2.2
                      , TypeNumerics >= 0.2.3.3
---                     , singletons >= 2.1
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions:  TypeOperators
                      , DataKinds
                      , TypeFamilies
 
-test-suite SI
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             PhQ/TestSI.hs
-  other-modules:       PhQ.Test.Common
-
-  build-depends:       PhysicalQuantities
-                     , base >=4.8 && <4.9
-                     , hspec >= 2.2 && < 2.3
-
-  default-language:    Haskell2010
-  default-extensions:  TypeOperators
-                     , DataKinds
-                     , TypeFamilies
+--test-suite SI
+--  type:                exitcode-stdio-1.0
+--  hs-source-dirs:      test
+--  main-is:             PhQ/TestSI.hs
+--  other-modules:       PhQ.Test.Common
+--
+--  build-depends:       PhysicalQuantities
+--                     , base >=4.8 && <4.9
+--                     , hspec >= 2.2 && < 2.3
+--
+--  default-language:    Haskell2010
+--  default-extensions:  TypeOperators
+--                     , DataKinds
+--                     , TypeFamilies
