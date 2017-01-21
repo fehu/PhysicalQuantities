@@ -13,16 +13,18 @@
 
 
 {-# LANGUAGE TemplateHaskell
---           , ExistentialQuantification
+           , ExistentialQuantification
 --           , FlexibleInstances
 --           , PolyKinds
 --           , UndecidableInstances
---           , FlexibleContexts
+           , FlexibleContexts
        #-}
 
 module PhysicalQuantities.Templates (
 
   genQuantityBase, genQuantityDerived
+, genUnitBase, genUnitDerived
+, genUnitSystem, (~>)
 
 , module Export
 
@@ -31,7 +33,7 @@ module PhysicalQuantities.Templates (
 import PhysicalQuantities.Definitions   as Export
 import PhysicalQuantities.Decomposition as Export
 
-import TypeNum.Rational
+import TypeNum.Rational as Export
 
 import Language.Haskell.TH
 
@@ -40,24 +42,19 @@ import Control.Monad
 import Data.Ratio
 --import Data.Traversable (for)
 
+
+
+
+
+-- Quantities atoms (bases) generation.
 -----------------------------------------------------------------------------
 
-noCxt = cxt []
-
-addDecls ::DecsQ -> [Dec] -> DecsQ
-addDecls dsq ds = fmap (++ ds) dsq
-
--- Decomposition Atoms (Bases) Generation
------------------------------------------------------------------------------
-
--- | data $name = $name
---   instance
 _genQuantity :: Name -> Dimensions -> DecsQ
 _genQuantity name dim = do
     let dimType = case dim of Dimensionless -> [t| Dimensionless |]
                               Scalar        -> [t| Scalar |]
                               Vector        -> [t| Vector |]
-    qData <- dataD noCxt name [] [normalC name []] []
+    qData <- dataD noCxt name [] Nothing [normalC name []] noCxt
     qInst <- instanceD noCxt [t|PhysicalQuantity $(conT name)|]
                              [ tySynInstD (mkName "QuantityDimensions")
                                           (tySynEqn [conT name] dimType)
@@ -76,37 +73,116 @@ _decompositionType name t = tySynInstD (mkName "DecompositionType")
     where tt = case t of Base    -> conT $ mkName "Base"
                          Derived -> conT $ mkName "Derived"
 
+
+-- | Generate an atomic quantity.
 genQuantityBase :: String -> Dimensions -> Q [Dec]
 genQuantityBase nme dim = do
     let name = mkName nme
+    _genQuantity name dim `mergeDecls` _genBase name
 
+-- | Generate a derived quantity.
+genQuantityDerived :: (DerivedQuantity q) => String -> q -> Q [Dec]
+genQuantityDerived nme q = do
+    let name = mkName nme
+    _genQuantity name (quantityDimensions q) `mergeDecls` _genDerived name q
+
+
+
+-- Units generation.
+-----------------------------------------------------------------------------
+
+_genUnit :: Name -> DecsQ
+_genUnit name = do
+    uData <- dataD noCxt name [] Nothing [normalC name []] noCxt
+    uInst <- instanceD noCxt [t|Unit $(conT name) Scalar|]
+                       [ funD (mkName "unitName")
+                              [clause [wildP] (normalB . litE . stringL $ nameBase name) []]
+                       , funD (mkName "unitInstance")
+                              [clause [] (normalB $ conE name) []]
+                       ]
+
+    return [uData, uInst]
+
+
+-- | Generate a /scalar/ base unit.
+genUnitBase :: String -> DecsQ
+genUnitBase nme = do
+    let name = mkName nme
+    _genUnit name `mergeDecls` _genBase name
+
+
+-- | Generate a /scalar/ derived unit.
+genUnitDerived :: DerivedUnit u Scalar => String -> u -> DecsQ
+genUnitDerived nme u = do
+    let name = mkName nme
+    _genUnit name `mergeDecls` _genDerived name u
+
+
+-- Unit systems generation.
+-----------------------------------------------------------------------------
+
+data UnitAssignation = forall q u dim. (PhysicalQuantity q, Unit u dim) => UnitAssignation q u
+
+a ~> b = UnitAssignation a b
+
+genUnitSystem :: (UnitPrefix prefix) => String -> prefix v -> [UnitAssignation] -> DecsQ
+genUnitSystem nme pref as = do
+    let name = mkName nme
+        prefType = conT . mkName $ prefixGroup pref
+        unitAssignations = do UnitAssignation q u <- as
+                              let qt = conT . mkName $ quantityName q
+                                  ut = conT . mkName $ unitName u
+                              return . tySynInstD (mkName "UnitFor")
+                                     $ tySynEqn [conT name, qt] ut
+    sData <- dataD noCxt name [] Nothing [normalC name []] noCxt
+    sInst <- instanceD noCxt [t|UnitSystem $(conT name)|]
+                     $ [ funD (mkName "unitSystemName")
+                              [clause [wildP] (normalB . litE $ stringL nme) []]
+                       , tySynInstD (mkName "Prefix") $
+                                    tySynEqn [conT name] prefType
+                       ]
+                    ++ unitAssignations
+    return [sData, sInst]
+
+-----------------------------------------------------------------------------
+
+-- Generate Base/Derived part of definition/
+
+noCxt = cxt []
+
+addDecls :: DecsQ -> [Dec] -> DecsQ
+addDecls dsq ds = fmap (++ ds) dsq
+
+mergeDecls :: DecsQ -> DecsQ -> DecsQ
+mergeDecls aq bq =  (++) <$> aq <*> bq
+
+
+_genBase :: Name -> DecsQ
+_genBase name = do
     tBaseInst <- instanceD noCxt [t|TBase $(conT name)|]
                                  [ tySynInstD (mkName "TSymbol")
-                                              (tySynEqn [conT name] . litT $ strTyLit nme)
+                                              (tySynEqn [conT name] . litT . strTyLit $ nameBase name)
                                  , funD (mkName "tFromSymbol")
                                         [clause [wildP] (normalB $ conE name) []]
                                  ]
     dType <- _decompositionType name Base
-    _genQuantity name dim `addDecls` [tBaseInst, dType]
 
+    return [tBaseInst, dType]
 
-genQuantityDerived :: (DerivedQuantity q) => String -> q -> Q [Dec]
-genQuantityDerived nme q = do
-    let name = mkName nme
-
+_genDerived :: TDerived t => Name -> t -> DecsQ
+_genDerived name t = do
     tDerivedInst <- instanceD noCxt
                               [t|TDerived $(conT name)|]
                               [ tySynInstD (mkName "TStructure")
-                                           (tySynEqn [conT name] $ structTypeQ q)
+                                           (tySynEqn [conT name] $ structTypeQ t)
                               , funD (mkName "tStructure")
-                                     [clause [wildP] (normalB $ structValQ q) []]
+                                     [clause [wildP] (normalB $ structValQ t) []]
                               ]
     dType <- _decompositionType name Derived
-    _genQuantity name (quantityDimensions q) `addDecls` [tDerivedInst, dType]
-
-
+    return [tDerivedInst, dType]
 
 -----------------------------------------------------------------------------
+-- TStruct utils
 
 structTypeQ :: (TDerived t) => t -> TypeQ
 structTypeQ t = [t|TStruct' $(struct2Type $ tStructure t)|]
@@ -129,3 +205,5 @@ structValQ :: (TDerived t) => t -> ExpQ
 structValQ = listE . map f . tStructure
     where f (s,p) = [|( $(litE $ stringL s), $(litE $ rationalL p) )|]
 
+
+-----------------------------------------------------------------------------

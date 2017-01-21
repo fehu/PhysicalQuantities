@@ -19,6 +19,7 @@
            , ExistentialQuantification
            , ConstraintKinds
            , UndecidableInstances
+           , FlexibleInstances
        #-}
 
 module PhysicalQuantities.Definitions (
@@ -35,11 +36,11 @@ module PhysicalQuantities.Definitions (
 , Measurable(..), measuredS, measuredS'
 , MeasuredS(..),  measuredSU
 
-, module Export
+, (:*), (:/), (:^)
 
 ) where
 
-import PhysicalQuantities.Combinations as Export
+import PhysicalQuantities.Combinations
 import PhysicalQuantities.Decomposition (TBase, TDerived)
 
 import TypeNum.Rational
@@ -57,9 +58,6 @@ class PhysicalQuantity q where type QuantityDimensions q :: Dimensions
 type BaseQuantity    q = (PhysicalQuantity q, TBase    q)
 type DerivedQuantity q = (PhysicalQuantity q, TDerived q)
 
---class (PhysicalQuantity q) => BaseQuantity q
---class (PhysicalQuantity q) => DerivedQuantity q where
-
 
 -----------------------------------------------------------------------------
 
@@ -71,13 +69,6 @@ instance ( PhysicalQuantity a, PhysicalQuantity b ) =>
         quantityName            (a :* b) = quantityName' " * " a b
         quantityInstance = quantityInstance :* quantityInstance
 
-
---        quantityDimensions q = resultingDimensions' (a q) (b q)
---            where a :: PhysicalQuantity a => (a :* b) -> a
---                  a _ = quantityInstance
---                  b :: PhysicalQuantity b => (a :* b) -> b
---                  b _ = quantityInstance
---
 
 instance ( PhysicalQuantity a, PhysicalQuantity b ) =>
     PhysicalQuantity (a :/ b) where
@@ -120,14 +111,34 @@ resultingDimensions' a b = resultingDimensions (quantityDimensions a) (quantityD
 class Unit u (dim :: Dimensions) | u -> dim where unitName :: u -> String
                                                   unitInstance :: u
 
-class (Unit u dim) => BaseUnit    u dim
-class (Unit u dim) => DerivedUnit u dim where
+type BaseUnit    u dim = (Unit u dim, TBase    u)
+type DerivedUnit u dim = (Unit u dim, TDerived u)
 
 -- | Vector container for units
-newtype (Unit u Scalar) => Vec u = Vec u
+newtype Vec u = Vec u
 
 -- | Vector container wraps any scalar unit and turns it into vector.
-instance Unit (Vec u) Vector where unitName u = "vec[" ++ unitName u ++ "]"
+instance (Unit u Scalar) => Unit (Vec u) Vector where unitName u = "Vec[" ++ unitName u ++ "]"
+                                                      unitInstance = Vec unitInstance
+
+-----------------------------------------------------------------------------
+
+instance ( Unit a dimA, Unit b dimB, dim ~ ResultingDimensions dimA dimB ) =>
+    Unit (a :* b) dim where
+        unitName (a :* b) = unitName' " * " a b
+        unitInstance = unitInstance :* unitInstance
+
+instance ( Unit a dimA, Unit b dimB, dim ~ ResultingDimensions dimA dimB ) =>
+    Unit (a :/ b) dim where
+        unitName (a :/ b) = unitName' " / " a b
+        unitInstance = unitInstance :/ unitInstance
+
+instance ( Unit a dim, KnownRatio (AsRational p) ) =>
+    Unit (a :^ p) dim where
+        unitName (a :^ p) = "(" ++ unitName a ++ ")^" ++ show p
+        unitInstance = unitInstance :^ Ratio'
+
+unitName' op a b = unitName a ++ op ++ unitName b
 
 -----------------------------------------------------------------------------
 
@@ -137,10 +148,9 @@ class (UnitPrefix (Prefix sys)) =>
                        type Prefix sys :: * -> *
                        type UnitFor sys phq :: *
 
-class UnitPrefix p where prefixValue     :: p v -> v
-                         prefixFromValue :: v   -> Maybe (p v)
-                         noPrefix        :: p v
-
+class UnitPrefix p where prefixGroup     :: p v -> String
+                         prefixValue     :: (Num v, Eq v) => p v -> v
+                         prefixFromValue :: (Num v, Eq v) => v   -> Maybe (p v)
 
 
 -- | Represents a 'Unit' within a UnitSystem'.
@@ -152,10 +162,10 @@ type UnitS sys phq = ( PhysicalQuantity phq
 
 -----------------------------------------------------------------------------
 
-data Measured v u dim = forall p . (UnitPrefix p) => Measured v (p v) u
+data Measured v u dim = forall p . (UnitPrefix p) => Measured v (Maybe (p v)) u
 
 measured :: (Unit u dim, UnitPrefix p) => v -> p v -> u -> Measured v u dim
-measured = Measured
+measured v p = Measured v (Just p)
 
 --measured' :: (Unit u dim) => v        -> u -> Measured v u dim
 --measured' v = Measured v noPrefix
@@ -171,19 +181,22 @@ data MeasuredS v sys phq = forall u . ( UnitFor sys phq ~ u
                                       , Unit u (QuantityDimensions phq)
                                       , UnitPrefix (Prefix sys)
                                       ) =>
-     MeasuredS v (Prefix sys v) u
+     MeasuredS v (Maybe (Prefix sys v)) u
 
 measuredS :: UnitS sys phq => Measurable phq v -> sys -> Prefix sys v -> v -> MeasuredS v sys phq
-measuredS _ _ pref v = MeasuredS v pref unitInstance
+measuredS _ _ pref v = MeasuredS v (Just pref) unitInstance
 
 measuredS' :: UnitS sys phq => Measurable phq v -> sys -> v -> MeasuredS v sys phq
-measuredS' _ _ v = MeasuredS v noPrefix unitInstance
+measuredS' _ _ v = MeasuredS v Nothing unitInstance
 
-measuredSU :: (UnitFor sys phq ~ u, Unit u (QuantityDimensions phq), UnitPrefix (Prefix sys)) =>
+measuredSU :: ( UnitFor sys phq ~ u, Unit u (QuantityDimensions phq)
+              , UnitPrefix (Prefix sys), Num v, Eq v ) =>
               Measurable phq v -> sys -> Measured v u (QuantityDimensions phq) -> MeasuredS v sys phq
-measuredSU _ _ (Measured v p u) = case prefixFromValue (prefixValue p) of
-                                    Just pref -> MeasuredS v pref u
-                                    Nothing   -> error "incompatible unit prefix"
+measuredSU _ _ (Measured v p u) = case p
+                                    of Nothing -> MeasuredS v Nothing u
+                                       Just p' -> case prefixFromValue $ prefixValue p'
+                                                    of Just pref -> MeasuredS v (Just pref) u
+                                                       Nothing   -> error "incompatible unit prefix"
 
 -----------------------------------------------------------------------------
 

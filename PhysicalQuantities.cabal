@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                PhysicalQuantities
-version:             0.2
+version:             0.2.2.0
 synopsis:            Type level physical quantities and measurement units.
 -- description:
 homepage:            -
@@ -23,7 +23,9 @@ library
                        PhysicalQuantities.Decomposition
                        PhysicalQuantities.Templates
 
-                       PhysicalQuantities.Quantity
+                       PhyQ.Quantity
+                       PhyQ.Units.SI
+                       PhyQ.SI
 --
 --                       PhQ
 --                       PhQ.PhysicalQuantities
@@ -32,14 +34,16 @@ library
 --                       PhQ.Units.SI.Composite
 
 
-  other-modules:       PhysicalQuantities.Quantity.Base
-                       PhysicalQuantities.Quantity.Derived
+  other-modules:       PhyQ.Quantity.Base
+                       PhyQ.Quantity.Derived
+                       PhyQ.Units.SI.Base
+                       PhyQ.Units.SI.Derived
 
   -- other-extensions:
-  build-depends:       base >=4.8 && <4.9
-                     , template-haskell >= 2.10 && < 2.11
+  build-depends:       base >=4.9 && <4.10
+                     , template-haskell == 2.11.*
 --                     , singletons >= 2.1 && < 2.2
-                     , TypeNumerics >= 0.2.3.3
+                     , TypeNumerics >= 0.2.4.0
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions:  TypeOperators
