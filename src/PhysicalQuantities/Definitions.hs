@@ -32,10 +32,6 @@ module PhysicalQuantities.Definitions (
 
 , UnitSystem(..), UnitPrefix(..), UnitS
 
-, Measured(..),   measured
-, Measurable(..), measuredS, measuredS'
-, MeasuredS(..),  measuredSU
-
 , (:*), (:/), (:^)
 
 ) where
@@ -161,57 +157,3 @@ type UnitS sys phq = ( PhysicalQuantity phq
 
 
 -----------------------------------------------------------------------------
-
-data Measured v u dim = forall p . (UnitPrefix p) => Measured v (Maybe (p v)) u
-
-measured :: (Unit u dim, UnitPrefix p) => v -> p v -> u -> Measured v u dim
-measured v p = Measured v (Just p)
-
---measured' :: (Unit u dim) => v        -> u -> Measured v u dim
---measured' v = Measured v noPrefix
-
-
------------------------------------------------------------------------------
-
--- | Quantity value descriptor with no unit system specified.
-data (PhysicalQuantity phq) => Measurable phq v = Measurable
-
--- | Quantity value within some unit system.
-data MeasuredS v sys phq = forall u . ( UnitFor sys phq ~ u
-                                      , Unit u (QuantityDimensions phq)
-                                      , UnitPrefix (Prefix sys)
-                                      ) =>
-     MeasuredS v (Maybe (Prefix sys v)) u
-
-measuredS :: UnitS sys phq => Measurable phq v -> sys -> Prefix sys v -> v -> MeasuredS v sys phq
-measuredS _ _ pref v = MeasuredS v (Just pref) unitInstance
-
-measuredS' :: UnitS sys phq => Measurable phq v -> sys -> v -> MeasuredS v sys phq
-measuredS' _ _ v = MeasuredS v Nothing unitInstance
-
-measuredSU :: ( UnitFor sys phq ~ u, Unit u (QuantityDimensions phq)
-              , UnitPrefix (Prefix sys), Num v, Eq v ) =>
-              Measurable phq v -> sys -> Measured v u (QuantityDimensions phq) -> MeasuredS v sys phq
-measuredSU _ _ (Measured v p u) = case p
-                                    of Nothing -> MeasuredS v Nothing u
-                                       Just p' -> case prefixFromValue $ prefixValue p'
-                                                    of Just pref -> MeasuredS v (Just pref) u
-                                                       Nothing   -> error "incompatible unit prefix"
-
------------------------------------------------------------------------------
-
-
-
------------------------------------------------------------------------------
-
-
--- Test
-
---data Speed
---instance PhysicalQuantity Speed
-
---class Test1 t where speedA :: t a -> Measurable Speed a
-
-
-
-
