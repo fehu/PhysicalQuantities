@@ -33,7 +33,7 @@ module PhysicalQuantities.Templates (
 import PhysicalQuantities.Definitions   as Export
 import PhysicalQuantities.Decomposition as Export
 
-import TypeNum.Rational as Export
+import TypeNum.Rational
 
 import Language.Haskell.TH
 
@@ -197,7 +197,7 @@ struct2Types = mapM $ \(s,p) -> [t|'($(litT $ strTyLit s), $(ratioType p))|]
 
 ratioType r = [t|$num :% $(nLit $ denominator r)|]
     where nLit = litT . numTyLit
-          num = case numerator r of n | n < 0 -> [t|Neg $(nLit n)|]
+          num = case numerator r of n | n < 0 -> [t|Neg $(nLit (abs n))|]
                                     n         -> [t|Pos $(nLit n)|]
 
 
