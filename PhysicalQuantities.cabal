@@ -19,8 +19,9 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        PhysicalQuantities.Definitions
-                       PhysicalQuantities.Combinations
                        PhysicalQuantities.Decomposition
+                       PhysicalQuantities.Decomposition.TStruct
+                       PhysicalQuantities.Combinations
                        PhysicalQuantities.Templates
 
                        PhyQ.Quantity
@@ -42,18 +43,20 @@ library
   default-extensions:  TypeOperators
                      , DataKinds
                      , TypeFamilies
+  -- ghc-options:       -ddump-splices
 
--- test-suite SI
---  type:                exitcode-stdio-1.0
---  hs-source-dirs:      test
---  main-is:             PhQ/TestSI.hs
---  -- other-modules:       PhQ.Test.Common
---
---  build-depends:       PhysicalQuantities
---                     , base >=4.9 && <4.10
---                     , hspec >= 2.3 && < 2.4
---
---  default-language:    Haskell2010
---  default-extensions:  TypeOperators
---                     , DataKinds
---                     , TypeFamilies
+test-suite Quantities
+ type:                exitcode-stdio-1.0
+ hs-source-dirs:      test
+ main-is:             PhyQ/TestQuantities.hs
+ other-modules:       PhyQ.Test.Common
+                      PhyQ.Test.QuantitiesSpec
+
+ build-depends:       PhysicalQuantities
+                    , base >=4.9 && <4.10
+                    , hspec >= 2.3 && < 2.4
+
+ default-language:    Haskell2010
+ default-extensions:  TypeOperators
+                    , DataKinds
+                    , TypeFamilies
