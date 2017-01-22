@@ -23,16 +23,17 @@ module PhysicalQuantities.Decomposition  (
   TBase(..), TDerived(..)
 
 , Decomposition(..)
-, TStruct(..), TStructVal
+, TStruct(..), TStructVal, CmpD
 , DecompositionType(..), T(..)
 
 ) where
 
+import PhysicalQuantities.Decomposition.TStruct
+
 import GHC.TypeLits (Symbol, KnownSymbol, symbolVal)
-        -- , CmpSymbol, SomeSymbol(..), symbolVal, someSymbolVal)
 import Data.Proxy (Proxy(..))
 
-import TypeNum.Rational
+import TypeNum.Rational (AsRational)
 
 -----------------------------------------------------------------------------
 -- * Public
@@ -48,8 +49,6 @@ class (KnownSymbol (TSymbol t)) =>
 class TDerived u where type TStructure u :: TStruct
                        tStructure :: u -> TStructVal
 
-
-data TStruct  = TStruct' [(Symbol, TRational)]
 
 type TStructVal = [(String, Rational)]
 
@@ -92,5 +91,7 @@ instance (DecompositionType t ~ Derived, TDerived t) => Decomposition' t Derived
     type TDecomposition' t Derived = TStructure t
     tDecomposition' _ = tStructure
 
+-----------------------------------------------------------------------------
 
-
+-- | Compare decompositions
+type CmpD (a :: TStruct) (b :: TStruct) = CmpTStructs a b

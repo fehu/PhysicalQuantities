@@ -12,11 +12,8 @@
 --
 
 
-{-# LANGUAGE PolyKinds
-           , MultiParamTypeClasses
-           , FunctionalDependencies
+{-# LANGUAGE FunctionalDependencies
            , FlexibleContexts
-           , ExistentialQuantification
            , ConstraintKinds
            , UndecidableInstances
            , FlexibleInstances
@@ -26,24 +23,54 @@ module PhysicalQuantities.Definitions (
 
   Dimensions (Scalar, Vector, Dimensionless)
 
-, PhysicalQuantity(..), BaseQuantity, DerivedQuantity
+, PhysicalQuantity(..), BaseQuantity, DerivedQuantity, Abs(..)
+, CmpQ, EqQ
 
 , Unit(..), BaseUnit(..), DerivedUnit(..), Vec(..)
 
 , UnitSystem(..), UnitPrefix(..), UnitS
 
-, (:*), (:/), (:^)
+, (:*)(..), (:/)(..), (:^)(..)
 
 ) where
 
 import PhysicalQuantities.Combinations
-import PhysicalQuantities.Decomposition (TBase, TDerived)
+import PhysicalQuantities.Decomposition ( TBase(..), TDerived(..)
+                                        , Decomposition(..), DecompositionType
+                                        , CmpD )
 
-import TypeNum.Rational
+import TypeNum.Rational hiding (Abs)
+
+import GHC.TypeLits (symbolVal)
+
+import Data.Type.Bool (If)
+import Data.Type.Equality
 
 -----------------------------------------------------------------------------
 
-data Dimensions = Dimensionless | Scalar | Vector deriving (Show, Eq)
+data Dimensions = Dimensionless | Scalar | Vector deriving (Show, Eq, Ord)
+
+instance TypesEq  (a :: Dimensions) (b :: Dimensions)
+  where type a ~=~ b  = CompareDimensions a b == EQ
+instance TypesOrd (a :: Dimensions) (b :: Dimensions)
+  where type Cmp a b  = CompareDimensions a b
+
+type instance (a :: Dimensions) == (b :: Dimensions)  =  a ~=~ b
+
+type family CompareDimensions (a :: Dimensions) (b :: Dimensions) :: Ordering
+  where CompareDimensions Dimensionless Dimensionless = EQ
+        CompareDimensions Dimensionless Scalar = LT
+        CompareDimensions Dimensionless Vector = LT
+        CompareDimensions Scalar Dimensionless = GT
+        CompareDimensions Vector Dimensionless = GT
+
+        CompareDimensions Scalar Scalar = EQ
+        CompareDimensions Scalar Vector = LT
+        CompareDimensions Vector Scalar = GT
+        CompareDimensions Vector Vector = EQ
+
+-----------------------------------------------------------------------------
+
 
 class PhysicalQuantity q where type QuantityDimensions q :: Dimensions
                                quantityDimensions :: q -> Dimensions
@@ -54,9 +81,9 @@ class PhysicalQuantity q where type QuantityDimensions q :: Dimensions
 type BaseQuantity    q = (PhysicalQuantity q, TBase    q)
 type DerivedQuantity q = (PhysicalQuantity q, TDerived q)
 
+type QuantityDecomposition q = (PhysicalQuantity q, Decomposition q)
 
 -----------------------------------------------------------------------------
-
 
 instance ( PhysicalQuantity a, PhysicalQuantity b ) =>
     PhysicalQuantity (a :* b) where
@@ -73,8 +100,8 @@ instance ( PhysicalQuantity a, PhysicalQuantity b ) =>
         quantityName            (a :/ b) = quantityName' " / " a b
         quantityInstance = quantityInstance :/ quantityInstance
 
-instance ( PhysicalQuantity a, KnownRatio (AsRational p) ) =>
-    PhysicalQuantity (a :^ p) where
+instance ( PhysicalQuantity a, MaybeRational p, KnownRatio (AsRational p) ) =>
+    PhysicalQuantity (a :^ (p :: k)) where
         type QuantityDimensions (a :^ p) = QuantityDimensions a
         quantityDimensions      (a :^ p) = quantityDimensions a
         quantityName            (a :^ p) = "(" ++ quantityName a ++ ")^" ++ show p
@@ -102,6 +129,28 @@ resultingDimensions' a b = resultingDimensions (quantityDimensions a) (quantityD
 
 -----------------------------------------------------------------------------
 
+-- | Scalar container for vector quantities.
+newtype Abs q = Abs q
+
+instance (PhysicalQuantity a, QuantityDimensions a ~ Vector) =>
+  PhysicalQuantity (Abs a) where
+    type QuantityDimensions (Abs a) = Scalar
+    quantityDimensions _ = Scalar
+    quantityName (Abs a) = "|" ++ quantityName a ++ "|"
+    quantityInstance = Abs quantityInstance
+
+type instance DecompositionType (Abs a) = DecompositionType a
+
+instance (BaseQuantity a) => TBase (Abs a) where
+  type TSymbol (Abs a) = TSymbol a
+  tFromSymbol = Abs . tFromSymbol
+
+instance (DerivedQuantity a) => TDerived (Abs a) where
+  type TStructure (Abs a) = TStructure a
+  tStructure (Abs a) = tStructure a
+
+-----------------------------------------------------------------------------
+
 -- | Represents a unit as a symbol (combination of symbols); measures no
 --   specific 'PhysicalQuantity' outside of a 'UnitSystem'.
 class Unit u (dim :: Dimensions) | u -> dim where unitName :: u -> String
@@ -110,7 +159,9 @@ class Unit u (dim :: Dimensions) | u -> dim where unitName :: u -> String
 type BaseUnit    u dim = (Unit u dim, TBase    u)
 type DerivedUnit u dim = (Unit u dim, TDerived u)
 
--- | Vector container for units
+type UnitDecomposition u dim = (Unit u dim, Decomposition u)
+
+-- | Vector container for scalar units.
 newtype Vec u = Vec u
 
 -- | Vector container wraps any scalar unit and turns it into vector.
@@ -129,8 +180,8 @@ instance ( Unit a dimA, Unit b dimB, dim ~ ResultingDimensions dimA dimB ) =>
         unitName (a :/ b) = unitName' " / " a b
         unitInstance = unitInstance :/ unitInstance
 
-instance ( Unit a dim, KnownRatio (AsRational p) ) =>
-    Unit (a :^ p) dim where
+instance ( Unit a dim, MaybeRational p, KnownRatio (AsRational p) ) =>
+    Unit (a :^ (p :: k)) dim where
         unitName (a :^ p) = "(" ++ unitName a ++ ")^" ++ show p
         unitInstance = unitInstance :^ Ratio'
 
@@ -155,5 +206,28 @@ type UnitS sys phq = ( PhysicalQuantity phq
                      , Unit (UnitFor sys phq) (QuantityDimensions phq)
                      )
 
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+-- eq and compare for quantities and units, using decompositions.
+
+class ( QuantityDecomposition q1, QuantityDecomposition q2 ) =>
+  CompareQuantities q1 q2 where
+    type CmpQ q1 q2 :: Ordering
+    type EqQ  q1 q2 :: Bool
+
+    type EqQ q1 q2 = CmpQ q1 q2 == EQ
+
+-- | Compare physical quantities by dimensions and decomposition.
+instance ( QuantityDecomposition q1, QuantityDecomposition q2 ) =>
+  CompareQuantities q1 q2 where
+    type CmpQ q1 q2 = If (QuantityDimensions q1 == QuantityDimensions q2)
+                         (CmpD (TDecomposition q1)     (TDecomposition q2))
+                         (Cmp  (QuantityDimensions q1) (QuantityDimensions q2))
+
+-----------------------------------------------------------------------------
+
+class ( UnitDecomposition u1 d1, UnitDecomposition u2 d2 ) =>
+  CompareUnits u1 d1 u2 d2 | u1 -> d1, u2 -> d2 where
 
 -----------------------------------------------------------------------------
