@@ -18,6 +18,8 @@ module PhyQ.Units.SI.Derived where
 import PhysicalQuantities.Templates
 import PhyQ.Units.SI.Base
 
+import TypeNum.Rational
+
 -----------------------------------------------------------------------------
 
 genUnitDerived "Newton" (unitInstance :: Kilogramm :* Meter :/ (Second:^Pos 2))

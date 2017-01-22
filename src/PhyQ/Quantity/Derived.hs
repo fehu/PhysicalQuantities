@@ -1,4 +1,4 @@
------------------------------------------------------------------------------
+----------------------------------------;-------------------------------------
 --
 -- Module      :  PhysicalQuantities.Decomposition.Quantity.Derived
 -- Copyright   :
@@ -12,7 +12,7 @@
 --
 
 {-# LANGUAGE TemplateHaskell, UndecidableInstances #-}
-{-# OPTIONS_GHC -ddump-splices #-}
+-- {-# OPTIONS_GHC -ddump-splices #-}
 
 module PhyQ.Quantity.Derived where
 
@@ -23,8 +23,4 @@ import PhyQ.Quantity.Base
 -----------------------------------------------------------------------------
 
 genQuantityDerived "Speed"        (quantityInstance :: Position :/ Time)
-genQuantityDerived "Acceleration" (quantityInstance :: Position :/ (Time:^(Pos 2:%1)))
-
-
-
-
+genQuantityDerived "Acceleration" (quantityInstance :: Position :/ (Time:^2))

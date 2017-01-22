@@ -12,9 +12,9 @@
 --
 
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -ddump-splices #-}
+-- {-# OPTIONS_GHC -ddump-splices #-}
 
-module PhyQ.SI ( module Export ) where
+module PhyQ.SI ( SI, module Export ) where
 
 import PhyQ.Quantity as Export
 import PhyQ.Units.SI as Export
@@ -24,10 +24,11 @@ import PhysicalQuantities.Templates
 -----------------------------------------------------------------------------
 
 genUnitSystem "SI" Kilo [ Time      ~> Second
-                        , Distance  ~> Meter
+                        -- , Distance  ~> Meter   -- TODO
                         , Mass      ~> Kilogramm
---
---                        , Position  ~> Vec Meter
+
+                        -- , Position  ~> Vec Meter -- TODO kills compiler
+                        -- , Speed     ~>
                         ]
 
 --data SI = SI
@@ -41,5 +42,3 @@ genUnitSystem "SI" Kilo [ Time      ~> Second
 --    type UnitFor SI Mass     = Kilogramm
 --
 --    type UnitFor SI Position = Vec Meter
-
-

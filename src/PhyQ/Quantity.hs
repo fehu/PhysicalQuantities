@@ -11,12 +11,18 @@
 -- |
 --
 
-module PhyQ.Quantity (module Export) where
+module PhyQ.Quantity (
+
+  module Export
+, TypesEq(..), type (=~=), type  (/~=), TypesOrd(..)
+
+) where
 
 import PhysicalQuantities.Definitions as Export
 
 import PhyQ.Quantity.Base     as Export
 import PhyQ.Quantity.Derived  as Export
 
------------------------------------------------------------------------------
+import TypeNum.TypeFunctions
 
+-----------------------------------------------------------------------------
