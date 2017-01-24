@@ -30,6 +30,7 @@ data SIPrefix v = Atto | Femto | Pico | Nano | Micro | Milli | Centi | Deci
 
 instance UnitPrefix SIPrefix where
     prefixGroup _ = "SIPrefix"
+    prefixName = show
     prefixValue prefix = case prefix of  Atto     -> 10^(-18)
                                          Femto    -> 10^(-15)
                                          Pico     -> 10^(-12)
@@ -65,3 +66,19 @@ instance UnitPrefix SIPrefix where
                       | v == 10^16    = Just Exa
                       | otherwise     = Nothing
 
+    convertPrefix pref = case pref of  Atto     -> Atto
+                                       Femto    -> Femto
+                                       Pico     -> Pico
+                                       Nano     -> Nano
+                                       Micro    -> Micro
+                                       Milli    -> Milli
+                                       Centi    -> Centi
+                                       Deci     -> Deci
+                                       Deca     -> Deca
+                                       Hecto    -> Hecto
+                                       Kilo     -> Kilo
+                                       Mega     -> Mega
+                                       Giga     -> Giga
+                                       Tera     -> Tera
+                                       Peta     -> Peta
+                                       Exa      -> Exa

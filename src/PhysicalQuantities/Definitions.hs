@@ -23,13 +23,15 @@ module PhysicalQuantities.Definitions (
 
   Dimensions (Scalar, Vector, Dimensionless)
 
-, PhysicalQuantity(..), BaseQuantity, DerivedQuantity, Abs(..)
+, PhysicalQuantity(..), Abs(..)
+, QuantityDecomposition, BaseQuantity, DerivedQuantity
 , CmpQ, EqQ
 
-, Unit(..), BaseUnit(..), DerivedUnit(..), Vec(..)
+, Unit(..), Vec(..)
+, UnitDecomposition, BaseUnit, DerivedUnit
 , CmpU, EqU
 
-, UnitSystem(..), UnitPrefix(..), UnitS
+, UnitSystem(..), UnitPrefix(..)
 
 , (:*)(..), (:/)(..), (:^)(..)
 
@@ -44,6 +46,7 @@ import TypeNum.Rational hiding (Abs)
 
 import GHC.TypeLits (symbolVal)
 
+import Data.Maybe (fromMaybe)
 import Data.Type.Bool (If)
 import Data.Type.Equality
 
@@ -86,11 +89,13 @@ type QuantityDecomposition q = (PhysicalQuantity q, Decomposition q)
 
 -----------------------------------------------------------------------------
 
+parenth s = "(" ++ s ++ ")"
+
 instance ( PhysicalQuantity a, PhysicalQuantity b ) =>
     PhysicalQuantity (a :* b) where
         type QuantityDimensions (a :* b) = ResultingDimensions' a b
         quantityDimensions      (a :* b) = resultingDimensions' a b
-        quantityName            (a :* b) = quantityName' " * " a b
+        quantityName            (a :* b) = parenth $ quantityName' " * " a b
         quantityInstance = quantityInstance :* quantityInstance
 
 
@@ -98,14 +103,14 @@ instance ( PhysicalQuantity a, PhysicalQuantity b ) =>
     PhysicalQuantity (a :/ b) where
         type QuantityDimensions (a :/ b) = ResultingDimensions' a b
         quantityDimensions      (a :/ b) = resultingDimensions' a b
-        quantityName            (a :/ b) = quantityName' " / " a b
+        quantityName            (a :/ b) = parenth $ quantityName' " / " a b
         quantityInstance = quantityInstance :/ quantityInstance
 
 instance ( PhysicalQuantity a, MaybeRational p, KnownRatio (AsRational p) ) =>
     PhysicalQuantity (a :^ (p :: k)) where
         type QuantityDimensions (a :^ p) = QuantityDimensions a
         quantityDimensions      (a :^ p) = quantityDimensions a
-        quantityName            (a :^ p) = "(" ++ quantityName a ++ ")^" ++ show p
+        quantityName            (a :^ p) = quantityName a ++ "^" ++ show p
         quantityInstance = quantityInstance :^ Ratio'
 
 
@@ -182,7 +187,7 @@ instance ( Unit a, Unit b ) => Unit (a :* b) where
                                                      (UnitDimensions b)
   unitDimensions (a :* b) = resultingDimensions (unitDimensions a)
                                                 (unitDimensions b)
-  unitName (a :* b) = unitName' " * " a b
+  unitName (a :* b) = parenth $ unitName' " * " a b
   unitInstance = unitInstance :* unitInstance
 
 instance ( Unit a, Unit b ) => Unit (a :/ b) where
@@ -190,14 +195,14 @@ instance ( Unit a, Unit b ) => Unit (a :/ b) where
                                                      (UnitDimensions b)
   unitDimensions (a :/ b) = resultingDimensions (unitDimensions a)
                                                 (unitDimensions b)
-  unitName (a :/ b) = unitName' " / " a b
+  unitName (a :/ b) = parenth $ unitName' " / " a b
   unitInstance = unitInstance :/ unitInstance
 
 instance ( Unit a, MaybeRational p, KnownRatio (AsRational p) ) =>
     Unit (a :^ (p :: k)) where
         type UnitDimensions (a :^ p) = UnitDimensions a
         unitDimensions (a :^ _) = unitDimensions a
-        unitName (a :^ p) = "(" ++ unitName a ++ ")^" ++ show p
+        unitName (a :^ p) = unitName a ++ "^" ++ show p
         unitInstance = unitInstance :^ Ratio'
 
 unitName' op a b = unitName a ++ op ++ unitName b
@@ -211,16 +216,11 @@ class (UnitPrefix (Prefix sys)) =>
                        type UnitFor sys phq :: *
 
 class UnitPrefix p where prefixGroup     :: p v -> String
+                         prefixName      :: p v -> String
                          prefixValue     :: (Num v, Eq v) => p v -> v
                          prefixFromValue :: (Num v, Eq v) => v   -> Maybe (p v)
 
-
--- | Represents a 'Unit' within a UnitSystem'.
-type UnitS sys phq = ( PhysicalQuantity phq
-                     , UnitSystem sys
-                     , Unit (UnitFor sys phq)
-                     , QuantityDimensions phq ~ UnitDimensions (UnitFor sys phq)
-                     )
+                         convertPrefix    :: p v -> p w
 
 
 -----------------------------------------------------------------------------

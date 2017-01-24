@@ -61,4 +61,6 @@ spec = describe "Physical Quantity" $ do
 
       correct (B::B( EqQ (Speed :* Time) Position ))
 
+  it "can be converted to standard quantity representation" $ example pending
+
 -----------------------------------------------------------------------------
