@@ -15,6 +15,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module PhysicalQuantities.Decomposition.TStruct (
 
@@ -49,6 +50,12 @@ import TypeNum.Rational
 
 data TStruct  = TStruct' [(Symbol, TRational)]
 
+
+-----------------------------------------------------------------------------
+
+instance TypesEq  (s1 :: Symbol) (s2 :: Symbol) where type s1 ~=~ s2 = CmpSymbol s1 s2 == EQ
+instance TypesOrd (s1 :: Symbol) (s2 :: Symbol) where type Cmp s1 s2 = CmpSymbol s1 s2
+
 -----------------------------------------------------------------------------
 -- Utils for [..] and ((.., ..))
 
@@ -65,8 +72,8 @@ type family QSort (l :: [(k, p)]) :: [(k, p)] where
 
 type family FilterOrd (ord :: Ordering) (e :: k) (l :: [(k, p)]) :: [(k, p)] where
     FilterOrd ord e '[] = '[]
-    FilterOrd ord e ('(u, n) ': t) = If (CmpSymbol e u == ord ) ('(u, n) ': FilterOrd ord e t)
-                                                              (FilterOrd ord e t)
+    FilterOrd ord e ('(u, n) ': t) = If (Cmp u e == ord ) ('(u, n) ': FilterOrd ord e t)
+                                                          (FilterOrd ord e t)
 
 -----------------------------------------------------------------------------
 
@@ -103,30 +110,23 @@ type family MapTStructKeys f (t :: TStruct) where
 type family MapTStructVals f (t :: TStruct) where
     MapTStructVals f (TStruct' m) = TStruct' (MapValues f m)
 
+
 -----------------------------------------------------------------------------
--- Sum association list values
 
-type family SumTStructs (m1 :: TStruct) (m2 :: TStruct) :: TStruct where
-    SumTStructs (TStruct' m1) (TStruct' m2) =
-      TStruct' (FilterZeroPow
-        (SumSortedMaps (SortAndFilterZeroPow m1) (SortAndFilterZeroPow m2)))
+-- |  Sum association list values
+type family SumTStructs (s1 :: TStruct) (s2 :: TStruct) :: TStruct
+  where SumTStructs (TStruct' m1) (TStruct' m2) =
+          TStruct' (SumTStructLists (QSort m1) (QSort m2))
 
-type family SumSortedMaps (m1 :: [(k, p)]) (m2 :: [(k, p)]) :: [(k, p)] where
-    SumSortedMaps  m1       '[]         = m1
-    SumSortedMaps '[]        m2         = m2
-    SumSortedMaps (h1 ': t1) (h2 ': t2) = SumSortedMaps' (CmpKeys h1 h2) (h1 ': t1) (h2 ': t2)
+type family SumTStructLists (s1 :: [(k,v)]) (s2 :: [(k,v)]) :: [(k,v)]
+  where SumTStructLists ( '(k1,v1) ': t1 ) ( '(k2,v2) ': t2 ) =
+            If (k1 == k2) ( '(k1, v1+v2) ': SumTStructLists t1 t2 )
+            (If (k1 < k2) ( '(k1, v1) ': SumTStructLists t1 ( '(k2,v2) ': t2 ))
+                          ( '(k2, v2) ': SumTStructLists ( '(k1,v1) ': t1 ) t2 ))
 
-type family SumSortedMaps' (ord :: Ordering) (m1 :: [(k, p)]) (m2 :: [(k, p)]) :: [(k, p)] where
-    SumSortedMaps' LT (h1 ': t1) m2         = h1 ': SumSortedMaps t1 m2
-    SumSortedMaps' EQ (h1 ': t1) (h2 ': t2) = SumPows h1 h2 ': SumSortedMaps t1 t2
-    SumSortedMaps' GT m1         (h2 ': t2) = h2 ': SumSortedMaps m1 t2
+        SumTStructLists '[] s2 = s2
+        SumTStructLists s1 '[] = s1
 
-
-type family CmpKeys (x :: (k,p)) (y :: (k,p)) :: Ordering where
-    CmpKeys '(k1,p1) '(k2,p2) = CmpSymbol k1 k2
-
-type family SumPows (x :: (k,p)) (y :: (k,p)) :: (k,p) where
-    SumPows '(k, p1) '(k, p2) = '(k, p1 + p2)
 
 -----------------------------------------------------------------------------
 -- Compare association lists.

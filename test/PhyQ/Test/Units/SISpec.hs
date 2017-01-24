@@ -31,6 +31,4 @@ spec = describe "Unit" $ do
     correct (B::B( EqU Newton (Kilogramm:*Meter:/(Second:^2)) ))
     correct (B::B( EqU (Newton:*Second) (Kilogramm:*Meter:/Second) ))
     correct (B::B( EqU (Newton:/Kilogramm) (Meter:/(Second:^2)) ))
-    -- correct (B::B( EqU (Newton:*Second:/Kilogramm) (Meter:/Second) ))
-
-    -- correct (B::B( EqU (Newton:/(Meter:/Second)) (Second:/Kilogramm) ))
+    correct (B::B( EqU (Meter:/Second:/Newton) (Second:/Kilogramm) ))

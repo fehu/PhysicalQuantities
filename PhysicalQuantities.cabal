@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                PhysicalQuantities
-version:             0.2.3.2
+version:             0.2.3.3
 synopsis:            Type level physical quantities and measurement units.
 -- description:
 homepage:            -
