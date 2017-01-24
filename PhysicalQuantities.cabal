@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                PhysicalQuantities
-version:             0.2.3.1
+version:             0.2.3.2
 synopsis:            Type level physical quantities and measurement units.
 -- description:
 homepage:            -
@@ -51,6 +51,23 @@ test-suite Quantities
  main-is:             PhyQ/TestQuantities.hs
  other-modules:       PhyQ.Test.Common
                       PhyQ.Test.QuantitiesSpec
+
+ build-depends:       PhysicalQuantities
+                    , base >=4.9 && <4.10
+                    , hspec >= 2.3 && < 2.4
+
+ default-language:    Haskell2010
+ default-extensions:  TypeOperators
+                    , DataKinds
+                    , TypeFamilies
+
+
+test-suite Units-SI
+ type:                exitcode-stdio-1.0
+ hs-source-dirs:      test
+ main-is:             PhyQ/TestUnitsSI.hs
+ other-modules:       PhyQ.Test.Common
+                      PhyQ.Test.Units.SISpec
 
  build-depends:       PhysicalQuantities
                     , base >=4.9 && <4.10

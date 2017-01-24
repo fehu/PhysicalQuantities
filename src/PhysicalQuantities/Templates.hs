@@ -89,11 +89,15 @@ genQuantityDerived nme q = do
 _genUnit :: Name -> DecsQ
 _genUnit name = do
     uData <- dataD noCxt name [] Nothing [normalC name []] noCxt
-    uInst <- instanceD noCxt [t|Unit $(conT name) Scalar|]
+    uInst <- instanceD noCxt [t|Unit $(conT name)|]
                        [ funD (mkName "unitName")
                               [clause [wildP] (normalB . litE . stringL $ nameBase name) []]
                        , funD (mkName "unitInstance")
                               [clause [] (normalB $ conE name) []]
+                       , tySynInstD (mkName "UnitDimensions")
+                          $ tySynEqn [conT name] . conT $ mkName "Scalar"
+                       , funD (mkName "unitDimensions")
+                              [clause [wildP] (normalB . conE $ mkName "Scalar" ) []]
                        ]
 
     return [uData, uInst]
@@ -107,7 +111,10 @@ genUnitBase nme = do
 
 
 -- | Generate a /scalar/ derived unit.
-genUnitDerived :: DerivedUnit u Scalar => String -> u -> DecsQ
+genUnitDerived :: ( DerivedUnit u, UnitDimensions u ~ Scalar
+                  , KnownTStruct (TStructure u)
+                  ) =>
+                  String -> u -> DecsQ
 genUnitDerived nme u = do
     let name = mkName nme
     _genUnit name `mergeDecls` _genDerived name u
@@ -116,7 +123,7 @@ genUnitDerived nme u = do
 -- Unit systems generation.
 -----------------------------------------------------------------------------
 
-data UnitAssignation = forall q u dim. (PhysicalQuantity q, Unit u dim) => UnitAssignation q u
+data UnitAssignation = forall q u . (PhysicalQuantity q, Unit u) => UnitAssignation q u
 
 a ~> b = UnitAssignation a b
 

@@ -12,7 +12,7 @@
 --
 
 
-{-# LANGUAGE FunctionalDependencies
+{-# LANGUAGE MultiParamTypeClasses
            , FlexibleContexts
            , ConstraintKinds
            , UndecidableInstances
@@ -27,6 +27,7 @@ module PhysicalQuantities.Definitions (
 , CmpQ, EqQ
 
 , Unit(..), BaseUnit(..), DerivedUnit(..), Vec(..)
+, CmpU, EqU
 
 , UnitSystem(..), UnitPrefix(..), UnitS
 
@@ -147,41 +148,55 @@ instance (BaseQuantity a) => TBase (Abs a) where
 
 instance (DerivedQuantity a) => TDerived (Abs a) where
   type TStructure (Abs a) = TStructure a
-  tStructure (Abs a) = tStructure a
 
 -----------------------------------------------------------------------------
 
 -- | Represents a unit as a symbol (combination of symbols); measures no
 --   specific 'PhysicalQuantity' outside of a 'UnitSystem'.
-class Unit u (dim :: Dimensions) | u -> dim where unitName :: u -> String
-                                                  unitInstance :: u
+class Unit u where
+    type UnitDimensions u :: Dimensions
+    unitDimensions :: u -> Dimensions
 
-type BaseUnit    u dim = (Unit u dim, TBase    u)
-type DerivedUnit u dim = (Unit u dim, TDerived u)
+    unitName :: u -> String
+    unitInstance :: u
 
-type UnitDecomposition u dim = (Unit u dim, Decomposition u)
+type BaseUnit    u = (Unit u, TBase    u)
+type DerivedUnit u = (Unit u, TDerived u)
+
+type UnitDecomposition u = (Unit u, Decomposition u)
 
 -- | Vector container for scalar units.
 newtype Vec u = Vec u
 
 -- | Vector container wraps any scalar unit and turns it into vector.
-instance (Unit u Scalar) => Unit (Vec u) Vector where unitName u = "Vec[" ++ unitName u ++ "]"
-                                                      unitInstance = Vec unitInstance
+instance (Unit u, UnitDimensions u ~ Scalar) =>
+  Unit (Vec u) where type UnitDimensions (Vec u) = Vector
+                     unitDimensions _ = Vector
+                     unitName u = "Vec[" ++ unitName u ++ "]"
+                     unitInstance = Vec unitInstance
 
 -----------------------------------------------------------------------------
 
-instance ( Unit a dimA, Unit b dimB, dim ~ ResultingDimensions dimA dimB ) =>
-    Unit (a :* b) dim where
-        unitName (a :* b) = unitName' " * " a b
-        unitInstance = unitInstance :* unitInstance
+instance ( Unit a, Unit b ) => Unit (a :* b) where
+  type UnitDimensions (a :* b) = ResultingDimensions (UnitDimensions a)
+                                                     (UnitDimensions b)
+  unitDimensions (a :* b) = resultingDimensions (unitDimensions a)
+                                                (unitDimensions b)
+  unitName (a :* b) = unitName' " * " a b
+  unitInstance = unitInstance :* unitInstance
 
-instance ( Unit a dimA, Unit b dimB, dim ~ ResultingDimensions dimA dimB ) =>
-    Unit (a :/ b) dim where
-        unitName (a :/ b) = unitName' " / " a b
-        unitInstance = unitInstance :/ unitInstance
+instance ( Unit a, Unit b ) => Unit (a :/ b) where
+  type UnitDimensions (a :/ b) = ResultingDimensions (UnitDimensions a)
+                                                     (UnitDimensions b)
+  unitDimensions (a :/ b) = resultingDimensions (unitDimensions a)
+                                                (unitDimensions b)
+  unitName (a :/ b) = unitName' " / " a b
+  unitInstance = unitInstance :/ unitInstance
 
-instance ( Unit a dim, MaybeRational p, KnownRatio (AsRational p) ) =>
-    Unit (a :^ (p :: k)) dim where
+instance ( Unit a, MaybeRational p, KnownRatio (AsRational p) ) =>
+    Unit (a :^ (p :: k)) where
+        type UnitDimensions (a :^ p) = UnitDimensions a
+        unitDimensions (a :^ _) = unitDimensions a
         unitName (a :^ p) = "(" ++ unitName a ++ ")^" ++ show p
         unitInstance = unitInstance :^ Ratio'
 
@@ -203,7 +218,8 @@ class UnitPrefix p where prefixGroup     :: p v -> String
 -- | Represents a 'Unit' within a UnitSystem'.
 type UnitS sys phq = ( PhysicalQuantity phq
                      , UnitSystem sys
-                     , Unit (UnitFor sys phq) (QuantityDimensions phq)
+                     , Unit (UnitFor sys phq)
+                     , QuantityDimensions phq ~ UnitDimensions (UnitFor sys phq)
                      )
 
 
@@ -227,7 +243,17 @@ instance ( QuantityDecomposition q1, QuantityDecomposition q2 ) =>
 
 -----------------------------------------------------------------------------
 
-class ( UnitDecomposition u1 d1, UnitDecomposition u2 d2 ) =>
-  CompareUnits u1 d1 u2 d2 | u1 -> d1, u2 -> d2 where
+class ( UnitDecomposition u1, UnitDecomposition u2 ) =>
+  CompareUnits u1 u2 where
+    type CmpU u1 u2 :: Ordering
+    type EqU  u1 u2 :: Bool
+
+    type EqU u1 u2 = CmpU u1 u2 == EQ
+
+instance ( UnitDecomposition u1, UnitDecomposition u2 ) =>
+  CompareUnits u1 u2 where
+    type CmpU u1 u2 = If (UnitDimensions u1 == UnitDimensions u2)
+                         (CmpD (TDecomposition u1) (TDecomposition u2))
+                         (Cmp  (UnitDimensions u1) (UnitDimensions u2))
 
 -----------------------------------------------------------------------------
