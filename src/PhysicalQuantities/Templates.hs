@@ -14,9 +14,6 @@
 
 {-# LANGUAGE TemplateHaskell
            , ExistentialQuantification
---           , FlexibleInstances
---           , PolyKinds
---           , UndecidableInstances
            , FlexibleContexts
        #-}
 
@@ -40,9 +37,6 @@ import Language.Haskell.TH
 import Control.Monad
 
 import Data.Ratio
---import Data.Traversable (for)
-
-
 
 
 
@@ -81,7 +75,8 @@ genQuantityBase nme dim = do
     _genQuantity name dim `mergeDecls` _genBase name
 
 -- | Generate a derived quantity.
-genQuantityDerived :: (DerivedQuantity q) => String -> q -> Q [Dec]
+genQuantityDerived :: (DerivedQuantity q, KnownTStruct (TStructure q)) =>
+                      String -> q -> Q [Dec]
 genQuantityDerived nme q = do
     let name = mkName nme
     _genQuantity name (quantityDimensions q) `mergeDecls` _genDerived name q
@@ -169,14 +164,12 @@ _genBase name = do
 
     return [tBaseInst, dType]
 
-_genDerived :: TDerived t => Name -> t -> DecsQ
+_genDerived :: (TDerived t, KnownTStruct (TStructure t)) => Name -> t -> DecsQ
 _genDerived name t = do
     tDerivedInst <- instanceD noCxt
                               [t|TDerived $(conT name)|]
                               [ tySynInstD (mkName "TStructure")
                                            (tySynEqn [conT name] $ structTypeQ t)
-                              , funD (mkName "tStructure")
-                                     [clause [wildP] (normalB $ structValQ t) []]
                               ]
     dType <- _decompositionType name Derived
     return [tDerivedInst, dType]
@@ -184,8 +177,8 @@ _genDerived name t = do
 -----------------------------------------------------------------------------
 -- TStruct utils
 
-structTypeQ :: (TDerived t) => t -> TypeQ
-structTypeQ t = [t|TStruct' $(struct2Type $ tStructure t)|]
+structTypeQ :: (TDerived t, KnownTStruct (TStructure t)) => t -> TypeQ
+structTypeQ t = [t|TStruct' $(struct2Type $ tDerivedStructure t)|]
 
 struct2Type :: TStructVal -> TypeQ
 struct2Type = foldr f promotedNilT <=< struct2Types
@@ -201,8 +194,8 @@ ratioType r = [t|$num :% $(nLit $ denominator r)|]
                                     n         -> [t|Pos $(nLit n)|]
 
 
-structValQ :: (TDerived t) => t -> ExpQ
-structValQ = listE . map f . tStructure
+structValQ :: (TDerived t, KnownTStruct (TStructure t)) => t -> ExpQ
+structValQ = listE . map f . tDerivedStructure
     where f (s,p) = [|( $(litE $ stringL s), $(litE $ rationalL p) )|]
 
 

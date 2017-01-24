@@ -3,4 +3,4 @@ Physical Quantities, Units and Measures at type-level
 
 ### TODO
 
-- [ ] Filter zero powers and sort decompositions immediately.
+- [x] Filter zero powers and sort decompositions immediately.

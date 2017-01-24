@@ -45,20 +45,16 @@ data a :^ p  = a :^ Ratio' (AsRational p)
 instance (Decomposition a, Decomposition b) =>
   TDerived (a :* b) where
     type TStructure (a :* b) = SumTStructs (TDecomposition a) (TDecomposition b)
-    tStructure (a :* b) = mapByKeys (+) (tDecomposition a) (tDecomposition b)
 
 
 instance (Decomposition a, Decomposition b) =>
   TDerived (a :/ b) where
     type TStructure (a :/ b) = SumTStructs (TDecomposition a) (NegatePowers (TDecomposition b))
-    tStructure (a :/ b) = mapByKeys (+) (tDecomposition a)
-                                        (second negate <$> tDecomposition b)
 
 
 instance (Decomposition a, KnownRatio (AsRational p), NumValue (AsRational p) ~ Rational) =>
   TDerived (a :^ p) where
     type TStructure (a :^ p) = MultPowers (TDecomposition a) (AsRational p)
-    tStructure (a :^ p) = second (*runtimeValue p) <$> tDecomposition a
 
 
 type instance DecompositionType (a :* b) = Derived

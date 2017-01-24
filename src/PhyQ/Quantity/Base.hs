@@ -29,7 +29,6 @@ instance PhysicalQuantity Factor where
   quantityInstance = Factor
 instance TDerived Factor where
   type TStructure Factor = TStruct' '[]
-  tStructure _ = []
 type instance DecompositionType Factor = Derived
 
 -----------------------------------------------------------------------------
