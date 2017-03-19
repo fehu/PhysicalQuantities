@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 --
--- Module      :  PhysicalQuantities.Decomposition.Quantity
+-- Module      :  PhyQ.Quantity
 -- Copyright   :
 -- License     :  MIT
 --

@@ -24,3 +24,4 @@ import PhyQ.Quantity.Base
 
 genQuantityDerived "Speed"        (quantityInstance :: Position :/ Time)
 genQuantityDerived "Acceleration" (quantityInstance :: Position :/ (Time:^2))
+genQuantityDerived "Force"        (quantityInstance :: Mass :* Position :/ (Time:^2))

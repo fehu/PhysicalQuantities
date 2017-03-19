@@ -214,6 +214,9 @@ class (UnitPrefix (Prefix sys)) =>
   UnitSystem sys where unitSystemName :: sys -> String
                        type Prefix sys :: * -> *
                        type UnitFor sys phq :: *
+                       unitFor :: (Unit (UnitFor sys phq)) =>
+                                  sys -> phq -> UnitFor sys phq
+                       unitFor _ _ = unitInstance
 
 class UnitPrefix p where prefixGroup     :: p v -> String
                          prefixName      :: p v -> String
