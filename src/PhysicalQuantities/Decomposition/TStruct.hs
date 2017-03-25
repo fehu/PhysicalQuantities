@@ -59,11 +59,6 @@ instance TypesOrd (s1 :: Symbol) (s2 :: Symbol) where type Cmp s1 s2 = CmpSymbol
 -----------------------------------------------------------------------------
 -- Utils for [..] and ((.., ..))
 
-type family (++) (l1 :: [a]) (l2 :: [a]) :: [a] where
-    '[]      ++ l = l
-    (h ': t) ++ l = h ': (t ++ l)
-
-
 type family QSort (l :: [(k, p)]) :: [(k, p)] where
     QSort '[] = '[]
     QSort ('(u, n) ': t) = QSort (FilterOrd LT u t)
